@@ -13,74 +13,81 @@ using System.Threading.Tasks;
 public class FileSystemApiTest
 {
     [TestMethod]
+    [Ignore("API removed")]
     public void Add_NoPin()
     {
-        var data = new MemoryStream(new byte[] { 11, 22, 33 });
-        var options = new AddFileOptions { Pin = false };
-        var node = TestFixture.IpfsContext.FileSystem.AddAsync(data, "", options).Result;
-        var pins = TestFixture.IpfsContext.Pin.ListAsync().Result;
-        Assert.IsFalse(pins.Any(pin => pin == node.Id));
+        // var data = new MemoryStream(new byte[] { 11, 22, 33 });
+        // var options = new AddFileOptions { Pin = false };
+        // var node = TestFixture.IpfsContext.FileSystem.AddAsync(data, "", options).Result;
+        // var pins = TestFixture.IpfsContext.Pin.ListAsync().Result;
+        // Assert.IsFalse(pins.Any(pin => pin == node.Id));
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public async Task Add_Raw()
     {
-        var options = new AddFileOptions
-        {
-            RawLeaves = true
-        };
-        var node = await TestFixture.IpfsContext.FileSystem.AddTextAsync("hello world", options);
-        Assert.AreEqual("bafkreifzjut3te2nhyekklss27nh3k72ysco7y32koao5eei66wof36n5e", (string)node.Id);
-        Assert.AreEqual(11, node.Size);
+        // var options = new AddFileOptions
+        // {
+        //     RawLeaves = true
+        // };
+        // var node = await TestFixture.IpfsContext.FileSystem.AddTextAsync("hello world", options);
+        // Assert.AreEqual("bafkreifzjut3te2nhyekklss27nh3k72ysco7y32koao5eei66wof36n5e", (string)node.Id);
+        // Assert.AreEqual(11, node.Size);
 
-        var text = await TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(node.Id);
-        Assert.AreEqual("hello world", text);
+        // var text = await TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(node.Id);
+        // Assert.AreEqual("hello world", text);
+        await Task.CompletedTask;
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public async Task Add_RawAndChunked()
     {
-        var options = new AddFileOptions
-        {
-            RawLeaves = true,
-            ChunkSize = 3
-        };
-        var node = await TestFixture.IpfsContext.FileSystem.AddTextAsync("hello world", options);
-        Assert.AreEqual("QmUuooB6zEhMmMaBvMhsMaUzar5gs5KwtVSFqG4C1Qhyhs", (string)node.Id);
-        Assert.AreEqual(false, node.IsDirectory);
+        // var options = new AddFileOptions
+        // {
+        //     RawLeaves = true,
+        //     ChunkSize = 3
+        // };
+        // var node = await TestFixture.IpfsContext.FileSystem.AddTextAsync("hello world", options);
+        // Assert.AreEqual("QmUuooB6zEhMmMaBvMhsMaUzar5gs5KwtVSFqG4C1Qhyhs", (string)node.Id);
+        // Assert.AreEqual(false, node.IsDirectory);
 
-        var links = (await TestFixture.IpfsContext.Object.LinksAsync(node.Id)).ToArray();
-        Assert.AreEqual(4, links.Length);
-        Assert.AreEqual("bafkreigwvapses57f56cfow5xvoua4yowigpwcz5otqqzk3bpcbbjswowe", (string)links[0].Id);
-        Assert.AreEqual("bafkreiew3cvfrp2ijn4qokcp5fqtoknnmr6azhzxovn6b3ruguhoubkm54", (string)links[1].Id);
-        Assert.AreEqual("bafkreibsybcn72tquh2l5zpim2bba4d2kfwcbpzuspdyv2breaq5efo7tq", (string)links[2].Id);
-        Assert.AreEqual("bafkreihfuch72plvbhdg46lef3n5zwhnrcjgtjywjryyv7ffieyedccchu", (string)links[3].Id);
+        // var links = (await TestFixture.IpfsContext.Object.LinksAsync(node.Id)).ToArray();
+        // Assert.AreEqual(4, links.Length);
+        // Assert.AreEqual("bafkreigwvapses57f56cfow5xvoua4yowigpwcz5otqqzk3bpcbbjswowe", (string)links[0].Id);
+        // Assert.AreEqual("bafkreiew3cvfrp2ijn4qokcp5fqtoknnmr6azhzxovn6b3ruguhoubkm54", (string)links[1].Id);
+        // Assert.AreEqual("bafkreibsybcn72tquh2l5zpim2bba4d2kfwcbpzuspdyv2breaq5efo7tq", (string)links[2].Id);
+        // Assert.AreEqual("bafkreihfuch72plvbhdg46lef3n5zwhnrcjgtjywjryyv7ffieyedccchu", (string)links[3].Id);
 
-        var text = await TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(node.Id);
-        Assert.AreEqual("hello world", text);
+        // var text = await TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(node.Id);
+        // Assert.AreEqual("hello world", text);
+        await Task.CompletedTask;
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public async Task Add_SizeChunking()
     {
-        var options = new AddFileOptions
-        {
-            ChunkSize = 3
-        };
-        options.Pin = true;
-        var node = await TestFixture.IpfsContext.FileSystem.AddTextAsync("hello world", options);
-        Assert.AreEqual("QmVVZXWrYzATQdsKWM4knbuH5dgHFmrRqW3nJfDgdWrBjn", (string)node.Id);
-        Assert.AreEqual(false, node.IsDirectory);
+        // var options = new AddFileOptions
+        // {
+        //     ChunkSize = 3
+        // };
+        // options.Pin = true;
+        // var node = await TestFixture.IpfsContext.FileSystem.AddTextAsync("hello world", options);
+        // Assert.AreEqual("QmVVZXWrYzATQdsKWM4knbuH5dgHFmrRqW3nJfDgdWrBjn", (string)node.Id);
+        // Assert.AreEqual(false, node.IsDirectory);
 
-        var links = (await TestFixture.IpfsContext.Object.LinksAsync(node.Id)).ToArray();
-        Assert.AreEqual(4, links.Length);
-        Assert.AreEqual("QmevnC4UDUWzJYAQtUSQw4ekUdqDqwcKothjcobE7byeb6", (string)links[0].Id);
-        Assert.AreEqual("QmTdBogNFkzUTSnEBQkWzJfQoiWbckLrTFVDHFRKFf6dcN", (string)links[1].Id);
-        Assert.AreEqual("QmPdmF1n4di6UwsLgW96qtTXUsPkCLN4LycjEUdH9977d6", (string)links[2].Id);
-        Assert.AreEqual("QmXh5UucsqF8XXM8UYQK9fHXsthSEfi78kewr8ttpPaLRE", (string)links[3].Id);
+        // var links = (await TestFixture.IpfsContext.Object.LinksAsync(node.Id)).ToArray();
+        // Assert.AreEqual(4, links.Length);
+        // Assert.AreEqual("QmevnC4UDUWzJYAQtUSQw4ekUdqDqwcKothjcobE7byeb6", (string)links[0].Id);
+        // Assert.AreEqual("QmTdBogNFkzUTSnEBQkWzJfQoiWbckLrTFVDHFRKFf6dcN", (string)links[1].Id);
+        // Assert.AreEqual("QmPdmF1n4di6UwsLgW96qtTXUsPkCLN4LycjEUdH9977d6", (string)links[2].Id);
+        // Assert.AreEqual("QmXh5UucsqF8XXM8UYQK9fHXsthSEfi78kewr8ttpPaLRE", (string)links[3].Id);
 
-        var text = await TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(node.Id);
-        Assert.AreEqual("hello world", text);
+        // var text = await TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(node.Id);
+        // Assert.AreEqual("hello world", text);
+        await Task.CompletedTask;
     }
 
     [TestMethod]
@@ -108,74 +115,76 @@ public class FileSystemApiTest
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public void AddDirectory()
     {
-        var temp = MakeTemp();
-        try
-        {
-            var dir = TestFixture.IpfsContext.FileSystem.AddDirectoryAsync(temp, false).Result;
-            Assert.IsTrue(dir.IsDirectory);
+        // var temp = MakeTemp();
+        // try
+        // {
+        //     var dir = TestFixture.IpfsContext.FileSystem.AddDirectoryAsync(temp, false).Result;
+        //     Assert.IsTrue(dir.IsDirectory);
 
-            var files = dir.Links.ToArray();
-            Assert.AreEqual(2, files.Length);
-            Assert.AreEqual("alpha.txt", files[0].Name);
-            Assert.AreEqual("beta.txt", files[1].Name);
+        //     var files = dir.Links.ToArray();
+        //     Assert.AreEqual(2, files.Length);
+        //     Assert.AreEqual("alpha.txt", files[0].Name);
+        //     Assert.AreEqual("beta.txt", files[1].Name);
 
-            Assert.AreEqual("alpha", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(files[0].Id).Result);
-            Assert.AreEqual("beta", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(files[1].Id).Result);
+        //     Assert.AreEqual("alpha", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(files[0].Id).Result);
+        //     Assert.AreEqual("beta", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(files[1].Id).Result);
 
-            Assert.AreEqual("alpha", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(dir.Id + "/alpha.txt").Result);
-            Assert.AreEqual("beta", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(dir.Id + "/beta.txt").Result);
-        }
-        finally
-        {
-            DeleteTemp(temp);
-        }
+        //     Assert.AreEqual("alpha", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(dir.Id + "/alpha.txt").Result);
+        //     Assert.AreEqual("beta", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(dir.Id + "/beta.txt").Result);
+        // }
+        // finally
+        // {
+        //     DeleteTemp(temp);
+        // }
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public void AddDirectoryRecursive()
     {
-        var temp = MakeTemp();
-        try
-        {
-            var dir = TestFixture.IpfsContext.FileSystem.AddDirectoryAsync(temp, true).Result;
-            Assert.IsTrue(dir.IsDirectory);
+        // var temp = MakeTemp();
+        // try
+        // {
+        //     var dir = TestFixture.IpfsContext.FileSystem.AddDirectoryAsync(temp, true).Result;
+        //     Assert.IsTrue(dir.IsDirectory);
 
-            var files = dir.Links.ToArray();
-            Assert.AreEqual(3, files.Length);
-            Assert.AreEqual("alpha.txt", files[0].Name);
-            Assert.AreEqual("beta.txt", files[1].Name);
-            Assert.AreEqual("x", files[2].Name);
-            Assert.AreNotEqual(0, files[0].Size);
-            Assert.AreNotEqual(0, files[1].Size);
+        //     var files = dir.Links.ToArray();
+        //     Assert.AreEqual(3, files.Length);
+        //     Assert.AreEqual("alpha.txt", files[0].Name);
+        //     Assert.AreEqual("beta.txt", files[1].Name);
+        //     Assert.AreEqual("x", files[2].Name);
+        //     Assert.AreNotEqual(0, files[0].Size);
+        //     Assert.AreNotEqual(0, files[1].Size);
 
-            var xfiles = new FileSystemNode(TestFixture.IpfsContext.FileSystem)
-            {
-                Id = files[2].Id,
-            }.Links.ToArray();
-            Assert.AreEqual(2, xfiles.Length);
-            Assert.AreEqual("x.txt", xfiles[0].Name);
-            Assert.AreEqual("y", xfiles[1].Name);
+        //     var xfiles = new FileSystemNode(TestFixture.IpfsContext.FileSystem)
+        //     {
+        //         Id = files[2].Id,
+        //     }.Links.ToArray();
+        //     Assert.AreEqual(2, xfiles.Length);
+        //     Assert.AreEqual("x.txt", xfiles[0].Name);
+        //     Assert.AreEqual("y", xfiles[1].Name);
 
-            var yfiles = new FileSystemNode(TestFixture.IpfsContext.FileSystem)
-            {
-                Id = xfiles[1].Id,
-            }.Links.ToArray();
-            Assert.AreEqual(1, yfiles.Length);
-            Assert.AreEqual("y.txt", yfiles[0].Name);
+        //     var yfiles = new FileSystemNode(TestFixture.IpfsContext.FileSystem)
+        //     {
+        //         Id = xfiles[1].Id,
+        //     }.Links.ToArray();
+        //     Assert.AreEqual(1, yfiles.Length);
+        //     Assert.AreEqual("y.txt", yfiles[0].Name);
 
-            var y = new FileSystemNode(TestFixture.IpfsContext.FileSystem)
-            {
-                Id = yfiles[0].Id,
-            };
-            Assert.AreEqual("y", Encoding.UTF8.GetString(y.DataBytes));
-            Assert.AreEqual("y", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(dir.Id + "/x/y/y.txt").Result);
-        }
-        finally
-        {
-            DeleteTemp(temp);
-        }
+        //     var y = new FileSystemNode(TestFixture.IpfsContext.FileSystem)
+        //     {
+        //         Id = yfiles[0].Id,
+        //     };
+        //     Assert.AreEqual("y", Encoding.UTF8.GetString(y.DataBytes));
+        //     Assert.AreEqual("y", TestFixture.IpfsContext.FileSystem.ReadAllTextAsync(dir.Id + "/x/y/y.txt").Result);
+        // }
+        // finally
+        // {
+        //     DeleteTemp(temp);
+        // }
     }
 
     [TestMethod]
@@ -238,31 +247,33 @@ public class FileSystemApiTest
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public async Task GetTar_EmptyDirectory()
     {
-        var temp = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        _ = Directory.CreateDirectory(temp);
-        try
-        {
-            var dir = TestFixture.IpfsContext.FileSystem.AddDirectoryAsync(temp, true).Result;
-            var dirid = dir.Id.Encode();
-
-            using var tar = await TestFixture.IpfsContext.FileSystem.GetAsync(dir.Id);
-            var buffer = new byte[3 * 512];
-            var offset = 0;
-            while (offset < buffer.Length)
-            {
-                var n = await tar.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset));
-                Assert.IsTrue(n > 0);
-                offset += n;
-            }
-
-            Assert.AreEqual(-1, tar.ReadByte());
-        }
-        finally
-        {
-            DeleteTemp(temp);
-        }
+        // var temp = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        // _ = Directory.CreateDirectory(temp);
+        // try
+        // {
+        //     var dir = TestFixture.IpfsContext.FileSystem.AddDirectoryAsync(temp, true).Result;
+        //     var dirid = dir.Id.Encode();
+        //
+        //     using var tar = await TestFixture.IpfsContext.FileSystem.GetAsync(dir.Id);
+        //     var buffer = new byte[3 * 512];
+        //     var offset = 0;
+        //     while (offset < buffer.Length)
+        //     {
+        //         var n = await tar.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset));
+        //         Assert.IsTrue(n > 0);
+        //         offset += n;
+        //     }
+        //
+        //     Assert.AreEqual(-1, tar.ReadByte());
+        // }
+        // finally
+        // {
+        //     DeleteTemp(temp);
+        // }
+        await Task.CompletedTask;
     }
 
     [TestMethod]

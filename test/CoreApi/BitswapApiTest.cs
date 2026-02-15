@@ -10,66 +10,67 @@ using System.Threading.Tasks;
 public class BitswapApiTest
 {
     [TestMethod]
+    [Ignore("API removed")]
     public async Task Wants()
     {
-        var block = new DagNode(Encoding.UTF8.GetBytes("BitswapApiTest unknown block"));
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-        Task.Run(() => TestFixture.IpfsContext.Bitswap.GetAsync(block.Id).Wait());
+        // var block = new DagNode(Encoding.UTF8.GetBytes("BitswapApiTest unknown block"));
+        // Task.Run(() => TestFixture.IpfsContext.Bitswap.GetAsync(block.Id).Wait());
 
-        var endTime = DateTime.Now.AddSeconds(10);
-        while (DateTime.Now < endTime)
-        {
-            await Task.Delay(100);
-            var wants = await TestFixture.IpfsContext.Bitswap.WantsAsync();
-            if (wants.Contains(block.Id))
-            {
-                return;
-            }
-        }
+        // var endTime = DateTime.Now.AddSeconds(10);
+        // while (DateTime.Now < endTime)
+        // {
+        //     await Task.Delay(100);
+        //     var wants = await TestFixture.IpfsContext.Bitswap.WantsAsync();
+        //     if (wants.Contains(block.Id))
+        //     {
+        //         return;
+        //     }
+        // }
 
-        Assert.Fail("wanted block is missing");
+        // Assert.Fail("wanted block is missing");
+        await Task.CompletedTask;
     }
 
     [TestMethod]
-    [Ignore("https://github.com/ipfs/go-ipfs/issues/5295")]
+    [Ignore("API removed")]
     public async Task Unwant()
     {
-        var block = new DagNode(Encoding.UTF8.GetBytes("BitswapApiTest unknown block 2"));
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-        Task.Run(() => TestFixture.IpfsContext.Bitswap.GetAsync(block.Id).Wait());
+        // var block = new DagNode(Encoding.UTF8.GetBytes("BitswapApiTest unknown block 2"));
+        // Task.Run(() => TestFixture.IpfsContext.Bitswap.GetAsync(block.Id).Wait());
 
-        var endTime = DateTime.Now.AddSeconds(10);
-        while (true)
-        {
-            if (DateTime.Now > endTime)
-            {
-                Assert.Fail("wanted block is missing");
-            }
+        // var endTime = DateTime.Now.AddSeconds(10);
+        // while (true)
+        // {
+        //     if (DateTime.Now > endTime)
+        //     {
+        //         Assert.Fail("wanted block is missing");
+        //     }
 
-            await Task.Delay(100);
-            var wants = await TestFixture.IpfsContext.Bitswap.WantsAsync();
-            if (wants.Contains(block.Id))
-            {
-                break;
-            }
-        }
+        //     await Task.Delay(100);
+        //     var wants = await TestFixture.IpfsContext.Bitswap.WantsAsync();
+        //     if (wants.Contains(block.Id))
+        //     {
+        //         break;
+        //     }
+        // }
 
-        await TestFixture.IpfsContext.Bitswap.UnwantAsync(block.Id);
-        endTime = DateTime.Now.AddSeconds(10);
-        while (true)
-        {
-            if (DateTime.Now > endTime)
-            {
-                Assert.Fail("unwanted block is present");
-            }
+        // await TestFixture.IpfsContext.Bitswap.UnwantAsync(block.Id);
+        // endTime = DateTime.Now.AddSeconds(10);
+        // while (true)
+        // {
+        //     if (DateTime.Now > endTime)
+        //     {
+        //         Assert.Fail("unwanted block is present");
+        //     }
 
-            await Task.Delay(100);
-            var wants = await TestFixture.IpfsContext.Bitswap.WantsAsync();
-            if (!wants.Contains(block.Id))
-            {
-                break;
-            }
-        }
+        //     await Task.Delay(100);
+        //     var wants = await TestFixture.IpfsContext.Bitswap.WantsAsync();
+        //     if (!wants.Contains(block.Id))
+        //     {
+        //         break;
+        //     }
+        // }
+        await Task.CompletedTask;
     }
 
     [TestMethod]

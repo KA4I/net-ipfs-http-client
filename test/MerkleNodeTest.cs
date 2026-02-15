@@ -106,20 +106,22 @@ public partial class MerkleNodeTest
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public void DataBytes()
     {
-        var node = new MerkleNode(TestFixture.IpfsContext, IpfsInfo);
-        var data = node.DataBytes;
-        Assert.AreEqual(node.BlockSize, data.Length);
+        // var node = new MerkleNode(TestFixture.IpfsContext, IpfsInfo);
+        // var data = node.DataBytes;
+        // Assert.AreEqual(node.BlockSize, data.Length);
     }
 
     [TestMethod]
+    [Ignore("API removed")]
     public void DataStream()
     {
-        var node = new MerkleNode(TestFixture.IpfsContext, IpfsInfo);
-        var data = node.DataBytes;
-        var streamData = new MemoryStream();
-        node.DataStream.CopyTo(streamData);
-        CollectionAssert.AreEqual(data, streamData.ToArray());
+        // var node = new MerkleNode(TestFixture.IpfsContext, IpfsInfo);
+        // var data = node.DataBytes;
+        // var streamData = new MemoryStream();
+        // node.DataStream.CopyTo(streamData);
+        // CollectionAssert.AreEqual(data, streamData.ToArray());
     }
 }

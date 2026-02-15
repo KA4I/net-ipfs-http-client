@@ -27,13 +27,16 @@ public partial class KeyApi : IKeyApi
     public KeyApi(IIpfsClient ipfs) => this.ipfs = ipfs;
 
     /// <inheritdoc />
-    public async Task<IKey?> CreateAsync(string name, string keyType, int size, CancellationToken cancel = default) =>
-        await this.ipfs.ExecuteCommand<KeyInfo?>(
+    public async Task<IKey> CreateAsync(string name, string keyType, int size, CancellationToken cancel = default)
+    {
+        var result = await this.ipfs.ExecuteCommand<KeyInfo?>(
             "key/gen",
             name,
             cancel,
             $"type={keyType}",
             $"size={size}");
+        return result ?? throw new HttpRequestException("No response from key/gen");
+    }
 
     /// <inheritdoc />
     public Task<string> ExportAsync(string name, char[] password, CancellationToken cancel = default) => throw new NotImplementedException();
@@ -42,7 +45,7 @@ public partial class KeyApi : IKeyApi
     public Task<IKey> ImportAsync(string name, string pem, char[]? password = null, CancellationToken cancel = default) => throw new NotImplementedException();
 
     /// <inheritdoc />
-    public async Task<IEnumerable<IKey?>?> ListAsync(CancellationToken cancel = default)
+    public async Task<IEnumerable<IKey>> ListAsync(CancellationToken cancel = default)
     {
         var json = await this.ipfs.ExecuteCommand<string?>("key/list", null, cancel, "l=true");
 
@@ -58,19 +61,20 @@ public partial class KeyApi : IKeyApi
     }
 
     /// <inheritdoc />
-    public async Task<IKey?> RenameAsync(string oldName, string newName, CancellationToken cancel = default)
+    public async Task<IKey> RenameAsync(string oldName, string newName, CancellationToken cancel = default)
     {
         var json = await this.ipfs.ExecuteCommand<string?>("key/rename", oldName, cancel, $"arg={newName}");
         if (json is null)
         {
-            return null;
+            throw new HttpRequestException("No response from key/rename");
         }
 
         var key = JObject.Parse(json);
+        var id = (string?)key?["Id"];
         return new KeyInfo
         {
-            Id = (string?)key?["Id"],
-            Name = (string?)key?["Now"]
+            Id = string.IsNullOrWhiteSpace(id) ? new Cid() : Cid.Decode(id),
+            Name = (string?)key?["Now"] ?? string.Empty
         };
     }
 
@@ -105,8 +109,8 @@ public partial class KeyApi : IKeyApi
 
             yield return new KeyInfo
             {
-                Id = string.IsNullOrWhiteSpace(id) ? null : new MultiHash(id),
-                Name = name
+                Id = string.IsNullOrWhiteSpace(id) ? new Cid() : Cid.Decode(id),
+                Name = name ?? string.Empty
             };
         }
     }

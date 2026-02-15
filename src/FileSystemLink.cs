@@ -13,5 +13,5 @@ public class FileSystemLink : IFileSystemLink
     public string? Name { get; set; }
 
     /// <inheritdoc />
-    public long Size { get; set; }
+    public ulong Size { get; set; }
 }

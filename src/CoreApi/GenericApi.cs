@@ -41,8 +41,11 @@ public class GenericApi : IGenericApi
     }
 
     /// <inheritdoc />
-    public async Task<Peer?> IdAsync(MultiHash? peer = null, CancellationToken cancel = default) =>
-        await this.ipfsClient.ExecuteCommand<Peer>("id", null, cancel, peer?.ToString() ?? string.Empty);
+    public async Task<Peer> IdAsync(MultiHash? peer = null, CancellationToken cancel = default)
+    {
+        var result = await this.ipfsClient.ExecuteCommand<Peer>("id", null, cancel, peer?.ToString() ?? string.Empty);
+        return result ?? throw new HttpRequestException("No response from id");
+    }
 
     /// <inheritdoc />
     public async Task<IEnumerable<PingResult>> PingAsync(MultiHash peer, int count = 10, CancellationToken cancel = default) =>
@@ -65,14 +68,27 @@ public class GenericApi : IGenericApi
             .ToEnumerable();
 
     /// <inheritdoc />
-    public async Task<string?> ResolveAsync(string name, bool recursive = true, CancellationToken cancel = default)
+    public IAsyncEnumerable<PingResult> Ping(MultiHash peer, int count = 10, CancellationToken cancel = default) =>
+        this.StreamPingResultAsync(peer.ToString(), count, cancel);
+
+    /// <inheritdoc />
+    public IAsyncEnumerable<PingResult> Ping(MultiAddress address, int count = 10, CancellationToken cancel = default) =>
+        this.StreamPingResultAsync(address.ToString(), count, cancel);
+
+    /// <inheritdoc />
+    public async Task<string> ResolveAsync(string name, bool recursive = true, CancellationToken cancel = default)
     {
         var response = await this.ipfsClient.ExecuteCommand<string>(
             "resolve",
             name,
             cancel,
             $"recursive={recursive.ToString().ToLowerInvariant()}");
-        return response is null ? null : (string?)(JObject.Parse(response)?["Path"]);
+        if (response is null)
+        {
+            throw new HttpRequestException("No response from resolve");
+        }
+
+        return (string?)(JObject.Parse(response)?["Path"]) ?? string.Empty;
     }
 
     /// <inheritdoc />
@@ -80,8 +96,11 @@ public class GenericApi : IGenericApi
         await this.ipfsClient.ExecuteCommand("shutdown");
 
     /// <inheritdoc />
-    public async Task<Dictionary<string, string?>?> VersionAsync(CancellationToken cancel = default) =>
-        await this.ipfsClient.ExecuteCommand<Dictionary<string, string?>?>("version", null, cancel);
+    public async Task<Dictionary<string, string>> VersionAsync(CancellationToken cancel = default)
+    {
+        var result = await this.ipfsClient.ExecuteCommand<Dictionary<string, string>?>("version", null, cancel);
+        return result ?? new Dictionary<string, string>();
+    }
 
     /// <summary>
     /// Streams the ping result.
@@ -116,6 +135,23 @@ public class GenericApi : IGenericApi
                 Text = (string?)r["Text"] ?? string.Empty,
                 Time = TimeSpan.FromTicks((long)(((long?)r["Time"] ?? 0L) * TicksPerNanosecond))
             };
+        }
+    }
+
+    private async IAsyncEnumerable<PingResult> StreamPingResultAsync(
+        string target,
+        int count,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancel)
+    {
+        var stream = await this.ipfsClient.ExecuteCommand<Stream>(
+            "ping",
+            target,
+            cancel,
+            $"count={count.ToString(CultureInfo.InvariantCulture)}");
+
+        await foreach (var result in this.StreamPingResult(stream))
+        {
+            yield return result;
         }
     }
 }

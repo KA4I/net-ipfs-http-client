@@ -31,8 +31,8 @@ public class IpfsContext : ICoreApi
     /// <param name="fileSystemApi">The file system API.</param>
     /// <param name="genericApi"></param>
     /// <param name="keyApi">The key API.</param>
+    /// <param name="mfsApi">The MFS API.</param>
     /// <param name="nameApi">The name API.</param>
-    /// <param name="objectApi">The object API.</param>
     /// <param name="pinApi">The pin API.</param>
     /// <param name="pubSubApi">The pub sub API.</param>
     /// <param name="serviceProvider">The service provider.</param>
@@ -48,10 +48,11 @@ public class IpfsContext : ICoreApi
         IDhtApi dhtApi,
         IDnsApi dnsApi,
         IFileSystemApi fileSystemApi,
+        IFilestoreApi filestoreApi,
         IGenericApi genericApi,
         IKeyApi keyApi,
+        IMfsApi mfsApi,
         INameApi nameApi,
-        IObjectApi objectApi,
         IPinApi pinApi,
         IPubSubApi pubSubApi,
         IServiceProvider serviceProvider,
@@ -67,10 +68,11 @@ public class IpfsContext : ICoreApi
         this.Dht = dhtApi ?? throw new ArgumentNullException(nameof(dhtApi));
         this.Dns = dnsApi ?? throw new ArgumentNullException(nameof(dnsApi));
         this.FileSystem = fileSystemApi ?? throw new ArgumentNullException(nameof(fileSystemApi));
+        this.Filestore = filestoreApi ?? throw new ArgumentNullException(nameof(filestoreApi));
         this.Generic = genericApi ?? throw new ArgumentNullException(nameof(genericApi));
         this.Key = keyApi ?? throw new ArgumentNullException(nameof(keyApi));
+        this.Mfs = mfsApi ?? throw new ArgumentNullException(nameof(mfsApi));
         this.Name = nameApi ?? throw new ArgumentNullException(nameof(nameApi));
-        this.Object = objectApi ?? throw new ArgumentNullException(nameof(objectApi));
         this.Pin = pinApi ?? throw new ArgumentNullException(nameof(pinApi));
         this.PubSub = pubSubApi ?? throw new ArgumentNullException(nameof(pubSubApi));
         ServiceProvider = serviceProvider;
@@ -106,16 +108,19 @@ public class IpfsContext : ICoreApi
     public IFileSystemApi FileSystem { get; }
 
     /// <inheritdoc />
+    public IFilestoreApi Filestore { get; }
+
+    /// <inheritdoc />
     public IGenericApi Generic { get; }
 
     /// <inheritdoc />
     public IKeyApi Key { get; }
 
     /// <inheritdoc />
-    public INameApi Name { get; }
+    public IMfsApi Mfs { get; }
 
     /// <inheritdoc />
-    public IObjectApi Object { get; }
+    public INameApi Name { get; }
 
     /// <inheritdoc />
     public IPinApi Pin { get; }

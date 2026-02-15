@@ -14,134 +14,140 @@ using Newtonsoft.Json.Linq;
 public class BlockApi : IBlockApi
 {
     private readonly IIpfsClient ipfs;
-    private readonly IPinApi pinApi;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BlockApi"/> class.
     /// </summary>
     /// <param name="ipfs">The ipfs.</param>
-    /// <param name="pinApi">The pin API.</param>
     /// <exception cref="System.ArgumentNullException">ipfs</exception>
-    /// <exception cref="System.ArgumentNullException">pinApi</exception>
-    public BlockApi(IIpfsClient ipfs, IPinApi pinApi)
+    public BlockApi(IIpfsClient ipfs)
     {
         this.ipfs = ipfs ?? throw new ArgumentNullException(nameof(ipfs));
-        this.pinApi = pinApi ?? throw new ArgumentNullException(nameof(pinApi));
     }
 
     /// <inheritdoc />
-    public async Task<IDataBlock?> GetAsync(Cid id, CancellationToken cancel = default)
+    public async Task<byte[]> GetAsync(Cid id, CancellationToken cancel = default)
     {
         var data = await this.ipfs.ExecuteCommand<byte[]>("block/get", id, cancel);
-        return data is null
-            ? null
-            : (IDataBlock)new Block
-            {
-                DataBytes = data,
-                Id = id
-            };
+        return data ?? Array.Empty<byte>();
     }
 
     /// <inheritdoc />
-    public async Task<Cid?> PutAsync(
+    public async Task<IBlockStat> PutAsync(
         byte[] data,
-        string contentType = Cid.DefaultContentType,
-        string multiHash = MultiHash.DefaultAlgorithmName,
-        string encoding = MultiBase.DefaultAlgorithmName,
-        bool pin = false,
+        string cidCodec = "raw",
+        MultiHash? hash = null,
+        bool? pin = null,
+        bool? allowBigBlock = null,
         CancellationToken cancel = default)
     {
         var options = new List<string>();
-        if (multiHash != MultiHash.DefaultAlgorithmName ||
-            contentType != Cid.DefaultContentType ||
-            encoding != MultiBase.DefaultAlgorithmName)
+        if (cidCodec != "raw")
         {
-            options.Add($"mhtype={multiHash}");
-            options.Add($"format={contentType}");
-            options.Add($"cid-base={encoding}");
+            options.Add($"cid-codec={cidCodec}");
+        }
+
+        if (hash is not null)
+        {
+            options.Add($"mhtype={hash}");
+        }
+
+        if (pin.HasValue)
+        {
+            options.Add($"pin={pin.Value.ToString().ToLowerInvariant()}");
+        }
+
+        if (allowBigBlock.HasValue)
+        {
+            options.Add($"allow-big-block={allowBigBlock.Value.ToString().ToLowerInvariant()}");
         }
 
         var json = await this.ipfs.ExecuteCommand<byte[], string?>("block/put", null, data, IpfsClient.IpfsHttpClientName, cancel, options.ToArray());
         if (json is null)
         {
-            return null;
-        }
-
-        var info = JObject.Parse(json);
-        Cid cid = (string?)info["Key"];
-
-        if (pin)
-        {
-            _ = await this.pinApi.AddAsync(cid, recursive: false, cancel: cancel);
-        }
-
-        return cid;
-    }
-
-    /// <inheritdoc />
-    public async Task<Cid?> PutAsync(
-        Stream data,
-        string contentType = Cid.DefaultContentType,
-        string multiHash = MultiHash.DefaultAlgorithmName,
-        string encoding = MultiBase.DefaultAlgorithmName,
-        bool pin = false,
-        CancellationToken cancel = default)
-    {
-        var options = new List<string>();
-        if (multiHash != MultiHash.DefaultAlgorithmName ||
-            contentType != Cid.DefaultContentType ||
-            encoding != MultiBase.DefaultAlgorithmName)
-        {
-            options.Add($"mhtype={multiHash}");
-            options.Add($"format={contentType}");
-            options.Add($"cid-base={encoding}");
-        }
-
-        var json = await this.ipfs.ExecuteCommand<Stream?, string?>("block/put", data: data, cancellationToken: cancel, options: options.ToArray());
-        if (json is null)
-        {
-            return null;
-        }
-
-        var info = JObject.Parse(json);
-        Cid? cid = (string?)info?["Key"];
-
-        if (pin)
-        {
-            _ = await this.pinApi.AddAsync(cid, recursive: false, cancel: cancel);
-        }
-
-        return cid;
-    }
-
-    /// <inheritdoc />
-    public async Task<Cid?> RemoveAsync(Cid id, bool ignoreNonexistent = false, CancellationToken cancel = default)
-    {
-        var json = await this.ipfs.ExecuteCommand<string?>("block/rm", id, cancel, "force=" + ignoreNonexistent.ToString().ToLowerInvariant());
-        if (json is null || json.Length == 0)
-        {
-            return null;
-        }
-
-        var result = JObject.Parse(json);
-        var error = (string?)result["Error"];
-        return error is null ? (Cid?)(string?)result["Hash"] : throw new HttpRequestException(error);
-    }
-
-    /// <inheritdoc />
-    public async Task<IDataBlock?> StatAsync(Cid id, CancellationToken cancel = default)
-    {
-        var json = await this.ipfs.ExecuteCommand<string?>("block/stat", id, cancel);
-        if (json is null)
-        {
-            return null;
+            throw new HttpRequestException("No response from block/put");
         }
 
         var info = JObject.Parse(json);
         return new Block
         {
-            Size = (long?)info?["Size"] ?? 0,
-            Id = (string?)info?["Key"]
+            Id = (string?)info["Key"] ?? string.Empty,
+            Size = (int?)info["Size"] ?? data.Length
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<IBlockStat> PutAsync(
+        Stream data,
+        string cidCodec = "raw",
+        MultiHash? hash = null,
+        bool? pin = null,
+        bool? allowBigBlock = null,
+        CancellationToken cancel = default)
+    {
+        var options = new List<string>();
+        if (cidCodec != "raw")
+        {
+            options.Add($"cid-codec={cidCodec}");
+        }
+
+        if (hash is not null)
+        {
+            options.Add($"mhtype={hash}");
+        }
+
+        if (pin.HasValue)
+        {
+            options.Add($"pin={pin.Value.ToString().ToLowerInvariant()}");
+        }
+
+        if (allowBigBlock.HasValue)
+        {
+            options.Add($"allow-big-block={allowBigBlock.Value.ToString().ToLowerInvariant()}");
+        }
+
+        var json = await this.ipfs.ExecuteCommand<Stream?, string?>("block/put", data: data, cancellationToken: cancel, options: options.ToArray());
+        if (json is null)
+        {
+            throw new HttpRequestException("No response from block/put");
+        }
+
+        var info = JObject.Parse(json);
+        return new Block
+        {
+            Id = (string?)info["Key"] ?? string.Empty,
+            Size = (int?)info["Size"] ?? 0
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<Cid> RemoveAsync(Cid id, bool ignoreNonexistent = false, CancellationToken cancel = default)
+    {
+        var json = await this.ipfs.ExecuteCommand<string?>("block/rm", id, cancel, "force=" + ignoreNonexistent.ToString().ToLowerInvariant());
+        if (json is null || json.Length == 0)
+        {
+            return id;
+        }
+
+        var result = JObject.Parse(json);
+        var error = (string?)result["Error"];
+        return error is null ? (Cid)(string?)result["Hash"]! : throw new HttpRequestException(error);
+    }
+
+    /// <inheritdoc />
+    public async Task<IBlockStat> StatAsync(Cid id, CancellationToken cancel = default)
+    {
+        var json = await this.ipfs.ExecuteCommand<string?>("block/stat", id, cancel);
+        if (json is null)
+        {
+            throw new HttpRequestException("No response from block/stat");
+        }
+
+        var info = JObject.Parse(json);
+        return new Block
+        {
+            Size = (int?)info?["Size"] ?? 0,
+            Id = (string?)info?["Key"] ?? string.Empty
         };
     }
 }

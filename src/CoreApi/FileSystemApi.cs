@@ -3,11 +3,11 @@
 // </copyright>
 namespace Ipfs.Http.Client.CoreApi;
 
-using DotNext.Threading;
 using Ipfs.CoreApi;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 /// <summary>
@@ -17,59 +17,49 @@ using System.Text;
 /// <seealso cref="Ipfs.CoreApi.IFileSystemApi" />
 public class FileSystemApi : IFileSystemApi
 {
-    private readonly AsyncLazy<DagNode> emptyFolder;
     private readonly IIpfsClient ipfs;
     private readonly ILogger<FileSystemApi> logger;
-    private readonly IObjectApi objectApi;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FileSystemApi"/> class.
     /// </summary>
     /// <param name="ipfs">The ipfs.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="objectApi">The object API.</param>
     /// <exception cref="System.ArgumentNullException">ipfs</exception>
     /// <exception cref="System.ArgumentNullException">logger</exception>
-    /// <exception cref="System.ArgumentNullException">objectApi</exception>
-    public FileSystemApi(IIpfsClient ipfs, ILogger<FileSystemApi> logger, IObjectApi objectApi)
+    public FileSystemApi(IIpfsClient ipfs, ILogger<FileSystemApi> logger)
     {
         this.ipfs = ipfs ?? throw new ArgumentNullException(nameof(ipfs));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        this.objectApi = objectApi ?? throw new ArgumentNullException(nameof(objectApi));
-
-        this.emptyFolder = new AsyncLazy<DagNode>(async () => await objectApi.NewDirectoryAsync());
     }
 
     /// <inheritdoc />
     public async Task<IFileSystemNode> AddAsync(Stream stream, string name = "", AddFileOptions? options = null, CancellationToken cancel = default)
     {
-        if (options is null)
-        {
-            options = new AddFileOptions();
-        }
+        options ??= new AddFileOptions();
 
         var opts = new List<string>();
-        if (!options.Pin)
+        if (options.Pin == false)
         {
             opts.Add("pin=false");
         }
 
-        if (options.Wrap)
+        if (options.Wrap == true)
         {
             opts.Add("wrap-with-directory=true");
         }
 
-        if (options.RawLeaves)
+        if (options.RawLeaves == true)
         {
             opts.Add("raw-leaves=true");
         }
 
-        if (options.OnlyHash)
+        if (options.OnlyHash == true)
         {
             opts.Add("only-hash=true");
         }
 
-        if (options.Trickle)
+        if (options.Trickle == true)
         {
             opts.Add("trickle=true");
         }
@@ -79,22 +69,15 @@ public class FileSystemApi : IFileSystemApi
             opts.Add("progress=true");
         }
 
-        if (options.Hash != MultiHash.DefaultAlgorithmName)
+        if (options.Hash is not null && options.Hash != MultiHash.DefaultAlgorithmName)
         {
-            opts.Add($"hash=${options.Hash}");
+            opts.Add($"hash={options.Hash}");
         }
 
-        if (options.Encoding != MultiBase.DefaultAlgorithmName)
+        if (!string.IsNullOrWhiteSpace(options.Chunker))
         {
-            opts.Add($"cid-base=${options.Encoding}");
+            opts.Add($"chunker={options.Chunker}");
         }
-
-        if (!string.IsNullOrWhiteSpace(options.ProtectionKey))
-        {
-            opts.Add($"protect={options.ProtectionKey}");
-        }
-
-        opts.Add($"chunker=size-{options.ChunkSize}");
 
         var response = await this.ipfs.ExecuteCommand<Stream?, Stream?>("add", null, stream, name, cancel, opts.ToArray());
 
@@ -125,7 +108,7 @@ public class FileSystemApi : IFileSystemApi
                     fsn = new FileSystemNode(this)
                     {
                         Id = (string?)r?["Hash"],
-                        Size = (string?)r?["Size"] is null ? 0L : long.Parse((string?)r["Size"] ?? "0"),
+                        Size = (string?)r?["Size"] is null ? 0UL : ulong.Parse((string?)r["Size"] ?? "0"),
                         IsDirectory = false,
                         Name = name,
                     };
@@ -142,59 +125,26 @@ public class FileSystemApi : IFileSystemApi
             throw new InvalidOperationException("No file added.");
         }
 
-        fsn.IsDirectory = options.Wrap;
+        fsn.IsDirectory = options.Wrap == true;
         return fsn;
     }
 
     /// <inheritdoc />
-    public async Task<IFileSystemNode> AddDirectoryAsync(string path, bool recursive = true, AddFileOptions? options = null, CancellationToken cancel = default)
+    public async IAsyncEnumerable<IFileSystemNode> AddAsync(
+        FilePart[] fileParts,
+        FolderPart[] folderParts,
+        AddFileOptions? options = default,
+        [EnumeratorCancellation] CancellationToken cancel = default)
     {
-        if (options is null)
+        // Add each file part individually through the standard add API
+        foreach (var filePart in fileParts)
         {
-            options = new AddFileOptions();
+            if (filePart.Data is not null)
+            {
+                var node = await this.AddAsync(filePart.Data, filePart.Name, options, cancel);
+                yield return node;
+            }
         }
-
-        options.Wrap = false;
-
-        // Add the files and sub-directories.
-        path = Path.GetFullPath(path);
-        var files = Directory
-            .EnumerateFiles(path)
-            .Select(p => this.AddFileAsync(p, options, cancel));
-        if (recursive)
-        {
-            var folders = Directory
-                .EnumerateDirectories(path)
-                .Select(dir => this.AddDirectoryAsync(dir, recursive, options, cancel));
-            files = files.Union(folders);
-        }
-
-        // go-ipfs v0.4.14 sometimes fails when sending lots of 'add file'
-        // requests.  It's happy with adding one file at a time.
-        var links = new List<IFileSystemLink>();
-        foreach (var file in files)
-        {
-            var node = await file;
-            links.Add(node.ToLink());
-        }
-
-        // Create the directory with links to the created files and sub-directories
-        var folder = (await this.emptyFolder)?.AddLinks(links);
-        var directory = await this.objectApi.PutAsync(folder, cancel);
-
-        if (this.logger.IsEnabled(LogLevel.Debug))
-        {
-            this.logger.LogDebug("added {directoryId} {fileName}", directory.Id, Path.GetFileName(path));
-        }
-
-        return new FileSystemNode(this)
-        {
-            Id = directory.Id,
-            Name = Path.GetFileName(path),
-            Links = links,
-            IsDirectory = true,
-            Size = directory.Size,
-        };
     }
 
     /// <inheritdoc />
@@ -210,22 +160,19 @@ public class FileSystemApi : IFileSystemApi
         this.AddAsync(new MemoryStream(Encoding.UTF8.GetBytes(text), false), "", options, cancel);
 
     /// <inheritdoc />
-    public Task<Stream?> GetAsync(string path, bool compress = false, CancellationToken cancel = default) =>
-            this.ipfs.ExecuteCommand<Stream>("get", path, cancel, $"compress={compress}");
+    public async Task<Stream> GetAsync(string path, bool compress = false, CancellationToken cancel = default)
+    {
+        var stream = await this.ipfs.ExecuteCommand<Stream>("get", path, cancel, $"compress={compress}");
+        return stream ?? Stream.Null;
+    }
 
-    /// <summary>
-    /// Get information about the file or directory.
-    /// </summary>
-    /// <param name="path">A path to an existing file or directory, such as "QmXarR6rgkQ2fDSHjSY5nM2kuCXKYGViky5nohtwgF65Ec/about"
-    /// or "QmZTR5bcpQD7cFgTorqxZDYaew1Wqgfbd2ud9QqGPAkK2V"</param>
-    /// <param name="cancel">Is used to stop the task.  When cancelled, the <see cref="TaskCanceledException" /> is raised.</param>
-    /// <returns>A Task&lt;IFileSystemNode&gt; representing the asynchronous operation.</returns>
-    public async Task<IFileSystemNode?> ListFileAsync(string path, CancellationToken cancel = default)
+    /// <inheritdoc />
+    public async Task<IFileSystemNode> ListAsync(string path, CancellationToken cancel = default)
     {
         var json = await this.ipfs.ExecuteCommand<string?>("file/ls", path, cancel);
         if (json is null)
         {
-            return null;
+            throw new HttpRequestException("No response from file/ls");
         }
 
         var r = JObject.Parse(json);
@@ -234,7 +181,7 @@ public class FileSystemApi : IFileSystemApi
         var node = new FileSystemNode(this)
         {
             Id = (string?)o?["Hash"],
-            Size = (long)(o?["Size"] ?? 0),
+            Size = (ulong)(o?["Size"] ?? 0),
             IsDirectory = (string?)o?["Type"] == "Directory",
             Links = Array.Empty<FileSystemLink>(),
         };
@@ -244,9 +191,9 @@ public class FileSystemApi : IFileSystemApi
             node.Links = links
                 .Select(l => new FileSystemLink()
                 {
-                    Name = (string?)l?["Name"],
+                    Name = (string?)l?["Name"] ?? string.Empty,
                     Id = (string?)l?["Hash"],
-                    Size = (long)(l?["Size"] ?? 0),
+                    Size = (ulong)(l?["Size"] ?? 0),
                 })
                 .ToArray();
         }
@@ -254,21 +201,10 @@ public class FileSystemApi : IFileSystemApi
         return node;
     }
 
-    /// <summary>
-    /// Reads the content of an existing IPFS file as text.
-    /// </summary>
-    /// <param name="path">A path to an existing file, such as "QmXarR6rgkQ2fDSHjSY5nM2kuCXKYGViky5nohtwgF65Ec/about"
-    /// or "QmZTR5bcpQD7cFgTorqxZDYaew1Wqgfbd2ud9QqGPAkK2V"</param>
-    /// <param name="cancel">Is used to stop the task.  When cancelled, the <see cref="TaskCanceledException" /> is raised.</param>
-    /// <returns>The contents of the <paramref name="path" /> as a <see cref="string" />.</returns>
-    public async Task<string?> ReadAllTextAsync(string path, CancellationToken cancel = default)
+    /// <inheritdoc />
+    public async Task<string> ReadAllTextAsync(string path, CancellationToken cancel = default)
     {
         using var data = await this.ReadFileAsync(path, cancel);
-        if (data is null)
-        {
-            return null;
-        }
-
         using var text = new StreamReader(data);
         return await text.ReadToEndAsync();
     }
@@ -293,28 +229,15 @@ public class FileSystemApi : IFileSystemApi
         return await text.ReadToEndAsync();
     }
 
-    /// <summary>
-    /// Opens an existing IPFS file for reading.
-    /// </summary>
-    /// <param name="path">A path to an existing file, such as "QmXarR6rgkQ2fDSHjSY5nM2kuCXKYGViky5nohtwgF65Ec/about"
-    /// or "QmZTR5bcpQD7cFgTorqxZDYaew1Wqgfbd2ud9QqGPAkK2V"</param>
-    /// <param name="cancel">Is used to stop the task.  When cancelled, the <see cref="TaskCanceledException" /> is raised.</param>
-    /// <returns>A <see cref="Stream" /> to the file contents.</returns>
-    /// <remarks>The returned <see cref="T:System.IO.Stream" /> must be disposed.</remarks>
-    public Task<Stream?> ReadFileAsync(string path, CancellationToken cancel = default) =>
-        this.ipfs.ExecuteCommand<Stream>("cat", path, cancel);
+    /// <inheritdoc />
+    public async Task<Stream> ReadFileAsync(string path, CancellationToken cancel = default)
+    {
+        var stream = await this.ipfs.ExecuteCommand<Stream>("cat", path, cancel);
+        return stream ?? Stream.Null;
+    }
 
-    /// <summary>
-    /// Reads the file asynchronous.
-    /// </summary>
-    /// <param name="path">The path.</param>
-    /// <param name="offset">The offset.</param>
-    /// <param name="length">The length.</param>
-    /// <param name="cancel">The cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>Task&lt;Stream&gt;.</returns>
-    /// <exception cref="System.NotSupportedException">Only int offsets are currently supported.</exception>
-    /// <exception cref="System.NotSupportedException">Only int lengths are currently supported.</exception>
-    public Task<Stream?> ReadFileAsync(string path, long offset, long length = 0, CancellationToken cancel = default)
+    /// <inheritdoc />
+    public async Task<Stream> ReadFileAsync(string path, long offset, long count = 0, CancellationToken cancel = default)
     {
         // https://github.com/ipfs/go-ipfs/issues/5380
         if (offset > int.MaxValue)
@@ -322,17 +245,18 @@ public class FileSystemApi : IFileSystemApi
             throw new NotSupportedException("Only int offsets are currently supported.");
         }
 
-        if (length > int.MaxValue)
+        if (count > int.MaxValue)
         {
             throw new NotSupportedException("Only int lengths are currently supported.");
         }
 
-        if (length == 0)
+        if (count == 0)
         {
-            length = int.MaxValue; // go-ipfs only accepts int lengths
+            count = int.MaxValue; // go-ipfs only accepts int lengths
         }
 
-        return this.ipfs.ExecuteCommand<Stream>("cat", path, cancel, $"offset={offset}", $"length={length}");
+        var stream = await this.ipfs.ExecuteCommand<Stream>("cat", path, cancel, $"offset={offset}", $"length={count}");
+        return stream ?? Stream.Null;
     }
 
     /// <summary>

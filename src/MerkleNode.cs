@@ -17,7 +17,7 @@ public class MerkleNode : IMerkleNode<IMerkleLink>, IEquatable<MerkleNode>
 {
     internal readonly IpfsContext ipfs;
 
-    private long blockSize;
+    private ulong blockSize;
     private bool hasBlockStats;
     private IEnumerable<IMerkleLink>? links;
     private string? name = string.Empty;
@@ -83,7 +83,7 @@ public class MerkleNode : IMerkleNode<IMerkleLink>, IEquatable<MerkleNode>
     /// Size of the raw, encoded node.
     /// </summary>
     [DataMember]
-    public long BlockSize
+    public ulong BlockSize
     {
         get
         {
@@ -91,13 +91,6 @@ public class MerkleNode : IMerkleNode<IMerkleLink>, IEquatable<MerkleNode>
             return this.blockSize;
         }
     }
-
-    /// <inheritdoc />
-    [DataMember]
-    public byte[] DataBytes => this.ipfs.Block.GetAsync(this.Id).Result.DataBytes;
-
-    /// <inheritdoc />
-    public Stream DataStream => this.ipfs.Block.GetAsync(this.Id).Result.DataStream;
 
     /// <inheritdoc />
     [DataMember]
@@ -112,11 +105,7 @@ public class MerkleNode : IMerkleNode<IMerkleLink>, IEquatable<MerkleNode>
     {
         get
         {
-            if (this.links is null)
-            {
-                this.links = this.ipfs.Object.LinksAsync(this.Id).Result;
-            }
-
+            this.links ??= Enumerable.Empty<IMerkleLink>();
             return this.links;
         }
     }
@@ -135,7 +124,7 @@ public class MerkleNode : IMerkleNode<IMerkleLink>, IEquatable<MerkleNode>
     /// <inheritdoc />
     /// <seealso cref="BlockSize"/>
     [DataMember]
-    public long Size => this.BlockSize;
+    public ulong Size => this.BlockSize;
 
     /// <summary>
     ///
@@ -192,7 +181,7 @@ public class MerkleNode : IMerkleNode<IMerkleLink>, IEquatable<MerkleNode>
         }
 
         var stats = this.ipfs.Block.StatAsync(this.Id).Result;
-        this.blockSize = stats.Size;
+        this.blockSize = (ulong)stats.Size;
         this.hasBlockStats = true;
     }
 }

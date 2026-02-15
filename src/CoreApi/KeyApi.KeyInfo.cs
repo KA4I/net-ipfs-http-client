@@ -16,12 +16,12 @@ public partial class KeyApi
     public class KeyInfo : IKey
     {
         /// <inheritdoc />
-        public MultiHash? Id { get; set; }
+        public Cid Id { get; set; } = new Cid();
 
         /// <inheritdoc />
-        public string? Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <inheritdoc />
-        public override string? ToString() => this.Name;
+        public override string ToString() => this.Name;
     }
 }

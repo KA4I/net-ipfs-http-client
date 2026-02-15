@@ -13,7 +13,7 @@ public class FileSystemNode : IFileSystemNode
     private readonly IFileSystemApi fileSystemApi;
     private bool? isDirectory;
     private IEnumerable<IFileSystemLink>? links;
-    private long? size;
+    private ulong? size;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FileSystemNode"/> class.
@@ -22,31 +22,12 @@ public class FileSystemNode : IFileSystemNode
     public FileSystemNode(IFileSystemApi fileSystemApi)
     {
         this.fileSystemApi = fileSystemApi ?? IpfsContext.GetServiceProvider().GetRequiredService<IFileSystemApi>();
-        this.dataStream = new(() => this.fileSystemApi.ReadFileAsync(this.Id));
+        this.dataStream = new AsyncLazy<Stream>(async (cancel) => await this.fileSystemApi.ReadFileAsync(this.Id, cancel));
     }
-
-    /// <inheritdoc />
-    public byte[] DataBytes
-    {
-        get
-        {
-            if (this.DataStream is null)
-            {
-                return Array.Empty<byte>();
-            }
-
-            using var data = new MemoryStream();
-            this.DataStream.CopyTo(data);
-            return data.ToArray();
-        }
-    }
-
-    /// <inheritdoc />
-    public Stream DataStream => this.dataStream.GetAwaiter().GetResult();
 
     /// <inheritdoc />
     [DataMember]
-    public Cid? Id { get; set; }
+    public Cid Id { get; set; } = new Cid();
 
     /// <summary>
     /// Determines if the link is a directory (folder).
@@ -87,16 +68,13 @@ public class FileSystemNode : IFileSystemNode
         set => this.links = value;
     }
 
-    /// <summary>
-    /// Gets or sets the file name of the IPFS node.
-    /// </summary>
-    /// <value>The file name of the IPFS node.</value>
+    /// <inheritdoc />
     [DataMember]
-    public string? Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc />
     [DataMember]
-    public long Size
+    public ulong Size
     {
         get
         {
@@ -125,10 +103,10 @@ public class FileSystemNode : IFileSystemNode
     /// </summary>
     private async Task GetInfo()
     {
-        var node = await this.fileSystemApi.ListFileAsync(this.Id);
+        var node = await this.fileSystemApi.ListAsync(this.Id);
 
-        this.IsDirectory = node?.IsDirectory ?? false;
-        this.Links = node?.Links ?? Enumerable.Empty<IFileSystemLink>();
-        this.Size = node?.Size ?? 0L;
+        this.IsDirectory = node.IsDirectory;
+        this.Links = node.Links;
+        this.Size = node.Size;
     }
 }

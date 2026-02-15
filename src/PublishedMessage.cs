@@ -30,20 +30,39 @@ public class PublishedMessage : IPublishedMessage
             return;
         }
 
-        this.Sender = (string?)o["from"];
-        this.SequenceNumber = Multibase.Decode((string?)o["seqno"], out MultibaseEncoding _);
-        this.DataBytes = Multibase.Decode((string?)o["data"], out MultibaseEncoding _);
+        var from = (string?)o["from"];
+        if (from is not null)
+        {
+            this.Sender = from;
+        }
+
+        var seqno = (string?)o["seqno"];
+        if (seqno is not null)
+        {
+            this.SequenceNumber = Multibase.Decode(seqno, out MultibaseEncoding _);
+        }
+
+        var data = (string?)o["data"];
+        if (data is not null)
+        {
+            this.DataBytes = Multibase.Decode(data, out MultibaseEncoding _);
+        }
 
         var topics = (JArray?)o["topicIDs"];
-        this.Topics = topics?.Select(t => Encoding.UTF8.GetString(Multibase.Decode((string?)t, out MultibaseEncoding _)));
+        if (topics is not null)
+        {
+            this.Topics = topics.Select(t => Encoding.UTF8.GetString(Multibase.Decode((string?)t, out MultibaseEncoding _))).ToArray();
+        }
     }
 
     /// <inheritdoc />
     [DataMember]
-    public byte[]? DataBytes { get; private set; }
+    public byte[] DataBytes { get; private set; } = Array.Empty<byte>();
 
-    /// <inheritdoc />
-    public Stream? DataStream => this.DataBytes is null ? null : new MemoryStream(this.DataBytes, false);
+    /// <summary>
+    ///   Contents as a stream.
+    /// </summary>
+    public Stream DataStream => new MemoryStream(this.DataBytes, false);
 
     /// <summary>
     ///   Contents as a string.
@@ -51,7 +70,7 @@ public class PublishedMessage : IPublishedMessage
     /// <value>
     ///   The contents interpreted as a UTF-8 string.
     /// </value>
-    public string? DataString => this.DataBytes is null ? null : Encoding.UTF8.GetString(this.DataBytes);
+    public string DataString => Encoding.UTF8.GetString(this.DataBytes);
 
     /// <summary>>
     ///   NOT SUPPORTED.
@@ -63,17 +82,19 @@ public class PublishedMessage : IPublishedMessage
 
     /// <inheritdoc />
     [DataMember]
-    public Peer? Sender { get; private set; }
+    public Peer Sender { get; private set; } = new Peer();
 
     /// <inheritdoc />
     [DataMember]
-    public byte[]? SequenceNumber { get; private set; }
+    public byte[] SequenceNumber { get; private set; } = Array.Empty<byte>();
+
+    /// <summary>
+    ///   The size of the data.
+    /// </summary>
+    [DataMember]
+    public long Size => this.DataBytes.Length;
 
     /// <inheritdoc />
     [DataMember]
-    public long Size => this.DataBytes?.Length ?? 0L;
-
-    /// <inheritdoc />
-    [DataMember]
-    public IEnumerable<string?>? Topics { get; private set; }
+    public IEnumerable<string> Topics { get; private set; } = Enumerable.Empty<string>();
 }

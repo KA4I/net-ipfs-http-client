@@ -3,9 +3,7 @@
 using Ipfs.CoreApi;
 using Ipfs.Http.Client.CoreApi;
 using Microsoft.Extensions.DependencyInjection;
-using Polly;
-using Polly.Contrib.WaitAndRetry;
-using Polly.Extensions.Http;
+using Microsoft.Extensions.Http.Resilience;
 using System.Net;
 using System.Reflection;
 
@@ -52,7 +50,12 @@ public static class ServiceCollectionExtensions
                     return handler;
                 })
             .SetHandlerLifetime(TimeSpan.FromMinutes(5))
-            .AddPolicyHandler(GetRetryPolicy());
+            .AddStandardResilienceHandler(options =>
+            {
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(10);
+                options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(5);
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(11);
+            });
 
         _ = services
             .AddLogging();
@@ -67,11 +70,12 @@ public static class ServiceCollectionExtensions
             .AddScoped<IDhtApi, DhtApi>()
             .AddScoped<IDnsApi, DnsApi>()
             .AddScoped<IFileSystemApi, FileSystemApi>()
+            .AddScoped<IFilestoreApi, FilestoreApi>()
             .AddScoped<IGenericApi, GenericApi>()
             .AddScoped<IIpfsClient, IpfsClient>()
             .AddScoped<IKeyApi, KeyApi>()
+            .AddScoped<IMfsApi, MfsApi>()
             .AddScoped<INameApi, NameApi>()
-            .AddScoped<IObjectApi, ObjectApi>()
             .AddScoped<IPinApi, PinApi>()
             .AddScoped<IPubSubApi, PubSubApi>()
             .AddScoped<IStatsApi, StatsApi>()
@@ -79,19 +83,5 @@ public static class ServiceCollectionExtensions
             .AddScoped<IpfsContext>();
 
         return services;
-    }
-
-    /// <summary>
-    /// Gets the retry policy.
-    /// </summary>
-    /// <returns>IAsyncPolicy&lt;HttpResponseMessage&gt;.</returns>
-    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-    {
-        var delay = Backoff.DecorrelatedJitterBackoffV2(medianFirstRetryDelay: TimeSpan.FromSeconds(1), retryCount: 5);
-
-        return HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .OrResult(msg => msg.StatusCode == HttpStatusCode.NotFound)
-            .WaitAndRetryAsync(delay);
     }
 }
